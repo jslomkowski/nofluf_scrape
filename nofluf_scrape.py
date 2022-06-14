@@ -47,5 +47,27 @@ for cash in cash_list:
     contract = re.sub(r'\s(?=\s)', '', re.sub(r'\s', ' ', contract))
     cash_values.append([value, contract])
 
-locations = soup.find('div', {'class': 'additional-info-row'}).get_text()
-location.get_text()
+locations = soup.find('ul', {'class': 'list-unstyled m-0'}).get_text()
+locations = re.sub(r'\s(?=\s)', '', re.sub(r'\s', ' ', locations))
+
+posting_time = soup.find('div', {'class': 'posting-time-row'}).get_text()
+posting_time = re.sub(r'\s(?=\s)', '', re.sub(r'\s', ' ', posting_time))
+
+tasks = soup.find(id='posting-tasks').get_text().split('\n')
+tasks = [task.strip() for task in tasks if task.strip() != '']
+tasks = [task for task in tasks if not task.isdigit()]
+
+specs = soup.find(id='posting-specs').get_text().split('\n')
+specs = [spec.strip() for spec in specs if spec.strip() != '']
+specs = [spec for spec in specs if spec != '•'][1:]
+
+gears = soup.find(
+    'section', {'class': 'd-flex align-items-start'}).get_text().split('\n')
+gears = [gear.strip() for gear in gears if gear.strip() != '']
+
+envs = soup.find(id='posting-environment').get_text().split('\n')
+envs = [env.strip() for env in envs if env.strip() != ''][1:]
+envs = [env.replace('\xa0', ' ') for env in envs]
+
+benfs = soup.find(id='posting-benefits').get_text().split('\n')
+benfs = [benf.strip() for benf in benfs if benf.strip() != ''][1:]
