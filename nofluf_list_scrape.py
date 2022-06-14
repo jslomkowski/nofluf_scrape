@@ -20,7 +20,6 @@ for i in range(1, 20):
         print(f'jobs found, page {i}')
         urls = [link.get('href') for link in soup.find_all('a')]
         urls = pd.Series([x for x in urls if '/pl/job/' in x], name='urls')
-        # if nofluffjobs_urls.csv does not exist then create else append
         if not os.path.isfile('nofluffjobs_urls.csv'):
             urls.to_csv('nofluffjobs_urls.csv', index=False)
         else:

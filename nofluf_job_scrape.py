@@ -1,6 +1,8 @@
 
+import datetime
 import re
 
+import numpy as np
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
@@ -14,6 +16,9 @@ def find_req(req):
     return req_list
 
 
+now = datetime.datetime.now()
+now = now.strftime("%Y-%m-%d %H:%M:%S")
+
 find_dict = {'object': 'btn btn-outline-success btn-sm text-truncate',
              'button': 'btn btn-outline-success btn-sm no-cursor text-truncate'}
 
@@ -22,19 +27,21 @@ headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/
 
 urls = pd.read_csv('nofluffjobs_urls.csv')
 urls = [f'https://nofluffjobs.com{x}' for x in urls['urls']]
-urls = urls[:5]
+urls = urls[10:15]
 
 data = []
 for u in urls:
     print(u)
-    scrape_dict = dict()
-    # u = urls[4]
     page = requests.get(u, headers=headers)
     soup = BeautifulSoup(page.content, "html.parser")
     soup = BeautifulSoup(soup.prettify(), "html.parser")
 
-    title = soup.find(
-        'h1', {'class': 'font-weight-bold bigger'}).get_text().strip()
+    try:
+        title = soup.find(
+            'h1', {'class': 'font-weight-bold bigger'}).get_text().strip()
+    except AttributeError:
+        title = soup.find(
+            'h1', {'class': 'font-weight-bold'}).get_text().strip()
 
     company = soup.find(id='postingCompanyUrl').get_text().strip()
 
@@ -43,7 +50,7 @@ for u in urls:
 
     req = soup.find_all('h3', {'class': 'mb-0'})
     primary_req_list = find_req(req[0])
-    secondary_req_list = find_req(req[1])
+    secondary_req_list = find_req(req[1]) if len(req) > 1 else []
 
     cash_values = []
     cash_list = soup.find_all('div', {'class': 'salary'})
@@ -58,13 +65,18 @@ for u in urls:
     try:
         locations = soup.find('ul', {'class': 'list-unstyled m-0'}).get_text()
         locations = re.sub(r'\s(?=\s)', '', re.sub(r'\s', ' ', locations))
+        locations = re.sub(r'Zdalnie • ', '', locations)
+        locations = re.findall(r'•(.*?),', locations)
+        locations = [x.strip() for x in locations]
     except AttributeError:
-        locations = 'N/A'
+        locations = np.nan
     try:
         remote = soup.find('li', {'class': 'remote'}).get_text()
         remote = re.sub(r'\s(?=\s)', '', re.sub(r'\s', ' ', remote))
+        if remote == ' Zdalnie ':
+            remote = True
     except AttributeError:
-        remote = 'N/A'
+        remote = np.nan
 
     posting_time = soup.find('div', {'class': 'posting-time-row'}).get_text()
     posting_time = re.sub(r'\s(?=\s)', '', re.sub(r'\s', ' ', posting_time))
@@ -86,12 +98,14 @@ for u in urls:
         envs = [env.strip() for env in envs if env.strip() != '']
         envs = [env.replace('\xa0', ' ') for env in envs]
     except AttributeError:
-        envs = 'N/A'
+        envs = np.nan
 
     benfs = soup.find(id='posting-benefits').get_text().split('\n')
     benfs = [benf.strip() for benf in benfs if benf.strip() != '']
 
-    scrape_dict['key'] = u.split('-')[-1]
+    scrape_dict = {'key': u.split('-')[-1]}
+    scrape_dict['timestamp'] = now
+    scrape_dict['link'] = u
     scrape_dict['title'] = title
     scrape_dict['company'] = company
     scrape_dict['level'] = level
@@ -108,5 +122,12 @@ for u in urls:
     scrape_dict['benfs'] = benfs
     data.append(scrape_dict)
 
-data = pd.DataFrame(data)
-data['cash_values'][4]
+df_data = pd.DataFrame(data)
+
+final_list = []
+for i in range(len(df_data)):
+    final_list = final_list + df_data['primary_req_list'][i]
+final_list = [x.lower() for x in final_list]
+
+final_list = pd.Series(final_list)
+final_list.value_counts().sort_index()
