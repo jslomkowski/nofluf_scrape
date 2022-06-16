@@ -198,9 +198,11 @@ for u in urls:
     scrape_dict['benfs'] = get_benfs(soup)
     data.append(scrape_dict)
 
+# make dataframe and pivot it
 df_data = pd.DataFrame(data)
 df_data = pd.melt(df_data, id_vars=['key'])
 
+# explode values in lists but keep original sorting
 df_data = df_data.groupby('key', as_index=False)
 df_data = df_data.apply(lambda x: x.reset_index(drop=True)).reset_index()
 with contextlib.suppress(KeyError):
@@ -208,15 +210,17 @@ with contextlib.suppress(KeyError):
         'level_1').reset_index(drop=True)
 df_data = df_data.explode('value').reset_index(drop=True)
 
+# some uop and b2b are empty. remove them
 missing_cur = df_data[df_data['value'].isnull()]
 missing_cur = missing_cur[missing_cur['variable'].isin(
     ['brutto miesięcznie (UoP) oblicz netto',
      '+ vat (B2B) miesięcznie oblicz "na rękę"'])].index
 df_data = df_data.drop(missing_cur).reset_index(drop=True)
 
+# make propper uop and b2b
 choices = ['B2B', 'UoP']
 for k in df_data['key'].unique():
-    df = df_data[df_data['key']==k]
+    df = df_data[df_data['key'] == k]
     for c in choices:
         if not df[df['variable'].str.contains(c)].empty:
             index = df[df['variable'].str.contains(c)]['value'].index
@@ -224,5 +228,6 @@ for k in df_data['key'].unique():
             df_data['variable'][index[1]] = f'{c}_cash_high'
             df_data['variable'][index[2]] = f'{c}_cash_currency'
 
+# save
 df_data.to_csv('result.csv', index=False)
 df_data.to_excel('result.xlsx', index=False)
