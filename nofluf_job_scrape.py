@@ -1,4 +1,5 @@
 
+import contextlib
 import datetime
 import re
 
@@ -72,7 +73,6 @@ def get_money(soup):
     value_currency_contract = []
     cash_list_class = soup.find_all('div', {'class': "salary"})
     for cash_class in cash_list_class:
-        # cash_class = cash_list_class[0]
         cash = cash_class.find('h4', {'class': 'mb-0'}).get_text()
         cash = re.sub(r'\s(?=\s)', '', re.sub(r'\s', ' ', cash)).strip()
         cash = re.sub(r'(\d)\s+(\d)', r'\1\2', cash)
@@ -119,9 +119,12 @@ def get_posting_time(soup):
 
 
 def get_tasks(soup):
-    tasks = soup.find(id='posting-tasks').get_text().split('\n')
-    tasks = [task.strip() for task in tasks if task.strip() != '']
-    return [task for task in tasks if not task.isdigit()]
+    try:
+        tasks = soup.find(id='posting-tasks').get_text().split('\n')
+        tasks = [task.strip() for task in tasks if task.strip() != '']
+        tasks = [task for task in tasks if not task.isdigit()]
+    except AttributeError:
+        tasks = np.nan
 
 
 def get_specs(soup):
@@ -162,7 +165,7 @@ now = now.strftime("%Y-%m-%d %H:%M:%S")
 
 urls = pd.read_csv('nofluffjobs_urls.csv')
 urls = [f'https://nofluffjobs.com{x}' for x in urls['urls']]
-urls = urls[0:10]
+urls = urls[-10:]
 
 data = []
 for u in urls:
@@ -194,6 +197,18 @@ for u in urls:
 
 df_data = pd.DataFrame(data)
 df_data = pd.melt(df_data, id_vars=['key'])
-df_data = df_data.explode('value')
+
+df_data = df_data.groupby('key', as_index=False)
+df_data = df_data.apply(lambda x: x.reset_index(drop=True)).reset_index()
+with contextlib.suppress(KeyError):
+    df_data = df_data.drop('level_0', axis=1).set_index(
+        'level_1').reset_index(drop=True)
+df_data = df_data.explode('value').reset_index(drop=True)
+
+missing_cur = df_data[df_data['value'].isnull()]
+missing_cur = missing_cur[missing_cur['variable'].isin(
+    ['value_currency_contract1', 'value_currency_contract2',
+     'value_currency_contract3'])].index
+df_data = df_data.drop(missing_cur)
 
 df_data.to_excel('result.xlsx', index=False)
