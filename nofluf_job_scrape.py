@@ -73,20 +73,21 @@ def get_money(soup):
     value_currency_contract = []
     cash_list_class = soup.find_all('div', {'class': "salary"})
     for cash_class in cash_list_class:
-        cash = cash_class.find('h4', {'class': 'mb-0'}).get_text()
-        cash = re.sub(r'\s(?=\s)', '', re.sub(r'\s', ' ', cash)).strip()
-        cash = re.sub(r'(\d)\s+(\d)', r'\1\2', cash)
-        value = [int(s) for s in cash.split() if s.isdigit()]
-        currency = [str(s) for s in cash.split() if not s.isdigit()]
-        if '-' in currency:
-            currency.remove('-')
-        currency = ', '.join(str(e) for e in currency)
-        contract = cash_class.find('div', {
-            'class': 'paragraph font-size-14 d-flex align-items-center flex-wrap type position-relative'}).get_text()
-        contract = re.sub(r'\s(?=\s)', '', re.sub(
-            r'\s', ' ', contract)).strip()
-        value = value + [currency] + [contract]
-        value_currency_contract.append(value)
+        if """class="salary">""" in str(cash_class):
+            cash = cash_class.find('h4', {'class': 'mb-0'}).get_text()
+            cash = re.sub(r'\s(?=\s)', '', re.sub(r'\s', ' ', cash)).strip()
+            cash = re.sub(r'(\d)\s+(\d)', r'\1\2', cash)
+            value = [int(s) for s in cash.split() if s.isdigit()]
+            currency = [str(s) for s in cash.split() if not s.isdigit()]
+            if '-' in currency:
+                currency.remove('-')
+            currency = ', '.join(str(e) for e in currency)
+            contract = cash_class.find('div', {
+                'class': 'paragraph font-size-14 d-flex align-items-center flex-wrap type position-relative'}).get_text()
+            contract = re.sub(r'\s(?=\s)', '', re.sub(
+                r'\s', ' ', contract)).strip()
+            value = value + [currency] + [contract]
+            value_currency_contract.append(value)
     return value_currency_contract
 
 
@@ -165,7 +166,8 @@ now = now.strftime("%Y-%m-%d %H:%M:%S")
 
 urls = pd.read_csv('nofluffjobs_urls.csv')
 urls = [f'https://nofluffjobs.com{x}' for x in urls['urls']]
-urls = urls[-10:]
+# urls = urls[-20:-10]
+# urls = ['https://nofluffjobs.com/pl/job/technical-writer-with-python-devsdata-llc-remote-d1bj60dv']
 
 data = []
 for u in urls:
@@ -184,7 +186,8 @@ for u in urls:
     scrape_dict['primary_req'] = get_pri_req(soup)
     scrape_dict['secondary_req'] = get_sec_req(soup)
     for i in range(len(value_currency_contract)):
-        scrape_dict[f'value_currency_contract{i}'] = value_currency_contract[i]
+        scrape_dict[value_currency_contract[i][-1]
+                    ] = value_currency_contract[i][:-1]
     scrape_dict['locations'] = get_locations(soup)
     scrape_dict['remote'] = get_remote(soup)
     scrape_dict['posting_time'] = get_posting_time(soup)
@@ -207,8 +210,19 @@ df_data = df_data.explode('value').reset_index(drop=True)
 
 missing_cur = df_data[df_data['value'].isnull()]
 missing_cur = missing_cur[missing_cur['variable'].isin(
-    ['value_currency_contract1', 'value_currency_contract2',
-     'value_currency_contract3'])].index
-df_data = df_data.drop(missing_cur)
+    ['brutto miesięcznie (UoP) oblicz netto',
+     '+ vat (B2B) miesięcznie oblicz "na rękę"'])].index
+df_data = df_data.drop(missing_cur).reset_index(drop=True)
 
+choices = ['B2B', 'UoP']
+for k in df_data['key'].unique():
+    df = df_data[df_data['key']==k]
+    for c in choices:
+        if not df[df['variable'].str.contains(c)].empty:
+            index = df[df['variable'].str.contains(c)]['value'].index
+            df_data['variable'][index[0]] = f'{c}_cash_low'
+            df_data['variable'][index[1]] = f'{c}_cash_high'
+            df_data['variable'][index[2]] = f'{c}_cash_currency'
+
+df_data.to_csv('result.csv', index=False)
 df_data.to_excel('result.xlsx', index=False)
