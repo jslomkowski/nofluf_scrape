@@ -164,7 +164,7 @@ def get_benfs(soup):
 now = datetime.datetime.now()
 now = now.strftime("%Y-%m-%d %H:%M:%S")
 
-urls = pd.read_csv('nofluffjobs_urls.csv')
+urls = pd.read_csv('data/nofluffjobs_urls.csv')
 urls = [f'https://nofluffjobs.com{x}' for x in urls['urls']]
 # urls = urls[-20:-10]
 # urls = ['https://nofluffjobs.com/pl/job/technical-writer-with-python-devsdata-llc-remote-d1bj60dv']
@@ -200,6 +200,7 @@ for u in urls:
 
 # make dataframe and pivot it
 df_data = pd.DataFrame(data)
+df_data = df_data.head(-1)
 df_data = pd.melt(df_data, id_vars=['key'])
 
 # explode values in lists but keep original sorting
@@ -212,16 +213,18 @@ df_data = df_data.explode('value').reset_index(drop=True)
 
 # some uop and b2b are empty. remove them
 missing_cur = df_data[df_data['value'].isnull()]
-missing_cur = missing_cur[missing_cur['variable'].isin(
-    ['brutto miesięcznie (UoP) oblicz netto',
-     '+ vat (B2B) miesięcznie oblicz "na rękę"'])].index
+pattern = '|'.join(['UoP', 'B2B', 'UZ'])
+missing_cur = missing_cur[missing_cur['variable'].str.contains(
+    pattern) == True].index
 df_data = df_data.drop(missing_cur).reset_index(drop=True)
 
 # make propper uop and b2b
-choices = ['B2B', 'UoP']
+choices = ['UoP', 'B2B', 'UZ']
 for k in df_data['key'].unique():
+    # k = '23genpik'
     df = df_data[df_data['key'] == k]
     for c in choices:
+        # c = 'B2B'
         if not df[df['variable'].str.contains(c)].empty:
             index = df[df['variable'].str.contains(c)]['value'].index
             df_data['variable'][index[0]] = f'{c}_cash_low'
@@ -229,5 +232,5 @@ for k in df_data['key'].unique():
             df_data['variable'][index[2]] = f'{c}_cash_currency'
 
 # save
-df_data.to_csv('result.csv', index=False)
-df_data.to_excel('result.xlsx', index=False)
+df_data.to_csv('data/result.csv', index=False)
+df_data.to_excel('data/result.xlsx', index=False)
