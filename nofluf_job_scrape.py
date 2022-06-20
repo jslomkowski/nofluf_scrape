@@ -8,7 +8,7 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 
-from config import headers
+from config import *
 
 
 def get_title(soup):
@@ -164,7 +164,7 @@ def get_benfs(soup):
 now = datetime.datetime.now()
 now = now.strftime("%Y-%m-%d %H:%M:%S")
 
-urls = pd.read_csv('data/nofluffjobs_urls.csv')
+urls = pd.read_csv(f'data/{NAME}_nofluffjobs_urls.csv')
 urls = [f'https://nofluffjobs.com{x}' for x in urls['urls']]
 # urls = urls[-20:-10]
 # urls = ['https://nofluffjobs.com/pl/job/technical-writer-with-python-devsdata-llc-remote-d1bj60dv']
@@ -218,19 +218,26 @@ missing_cur = missing_cur[missing_cur['variable'].str.contains(
     pattern) == True].index
 df_data = df_data.drop(missing_cur).reset_index(drop=True)
 
-# make propper uop and b2b
+# make propper uop and b2b by changing variable name strings
 choices = ['UoP', 'B2B', 'UZ']
 for k in df_data['key'].unique():
-    # k = '23genpik'
+    # k = 'dinualyq'
+    # print(k)
     df = df_data[df_data['key'] == k]
     for c in choices:
         # c = 'B2B'
+        # print(c)
         if not df[df['variable'].str.contains(c)].empty:
+            # print('do')
             index = df[df['variable'].str.contains(c)]['value'].index
-            df_data['variable'][index[0]] = f'{c}_cash_low'
-            df_data['variable'][index[1]] = f'{c}_cash_high'
-            df_data['variable'][index[2]] = f'{c}_cash_currency'
+            if len(index) == 3:
+                df_data['variable'][index[0]] = f'{c}_cash_low'
+                df_data['variable'][index[1]] = f'{c}_cash_high'
+                df_data['variable'][index[2]] = f'{c}_cash_currency'
+            elif len(index) == 2:
+                df_data['variable'][index[0]] = f'{c}_cash_low'
+                df_data['variable'][index[1]] = f'{c}_cash_currency'
 
 # save
-df_data.to_csv('data/result.csv', index=False)
-df_data.to_excel('data/result.xlsx', index=False)
+df_data.to_csv(f'data/{NAME}_result.csv', index=False)
+df_data.to_excel(f'data/{NAME}_result.xlsx', index=False)

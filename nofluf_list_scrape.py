@@ -5,7 +5,7 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 
-from config import FIRST_PAGE
+from config import *
 
 headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36", "Accept-Encoding": "gzip, deflate",
            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", "DNT": "1", "Connection": "close", "Upgrade-Insecure-Requests": "1"}
@@ -20,10 +20,10 @@ for i in range(1, 20):
         print(f'jobs found, page {i}')
         urls = [link.get('href') for link in soup.find_all('a')]
         urls = pd.Series([x for x in urls if '/pl/job/' in x], name='urls')
-        if not os.path.isfile('data/nofluffjobs_urls.csv'):
-            urls.to_csv('data/nofluffjobs_urls.csv', index=False)
+        if not os.path.isfile(f'data/{NAME}_nofluffjobs_urls.csv'):
+            urls.to_csv(f'data/{NAME}_nofluffjobs_urls.csv', index=False)
         else:
-            urls.to_csv('data/nofluffjobs_urls.csv', mode='a',
+            urls.to_csv(f'data/{NAME}_nofluffjobs_urls.csv', mode='a',
                         header=False, index=False)
     else:
         print('No more jobs found')

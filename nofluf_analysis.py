@@ -1,8 +1,9 @@
 import pandas as pd
 import json
+from config import *
 
 # df = pd.read_excel('data/result.xlsx')
-df = pd.read_csv('data/result.csv')
+df = pd.read_csv(f'data/{NAME}_result.csv')
 
 df['value'] = df['value'].str.lower()
 
@@ -35,7 +36,7 @@ structured_perks = structured_perks[[
 ]]
 
 # save
-with pd.ExcelWriter('data/result.xlsx') as writer:
+with pd.ExcelWriter(f'data/{NAME}_result.xlsx') as writer:
     structured_perks.to_excel(
         writer, sheet_name='structured_perks', index=False)
     unstructured_perks.to_excel(
