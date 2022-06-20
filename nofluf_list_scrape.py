@@ -28,5 +28,3 @@ for i in range(1, 20):
     else:
         print('No more jobs found')
         break
-
-# TODO: make only 'on top' functionality
