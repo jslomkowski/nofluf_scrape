@@ -1,4 +1,5 @@
 
+import csv
 import contextlib
 import datetime
 import re
@@ -72,22 +73,26 @@ def get_sec_req(soup):
 def get_money(soup):
     value_currency_contract = []
     cash_list_class = soup.find_all('div', {'class': "salary"})
-    for cash_class in cash_list_class:
-        if """class="salary">""" in str(cash_class):
-            cash = cash_class.find('h4', {'class': 'mb-0'}).get_text()
-            cash = re.sub(r'\s(?=\s)', '', re.sub(r'\s', ' ', cash)).strip()
-            cash = re.sub(r'(\d)\s+(\d)', r'\1\2', cash)
-            value = [int(s) for s in cash.split() if s.isdigit()]
-            currency = [str(s) for s in cash.split() if not s.isdigit()]
-            if '-' in currency:
-                currency.remove('-')
-            currency = ', '.join(str(e) for e in currency)
-            contract = cash_class.find('div', {
-                'class': 'paragraph font-size-14 d-flex align-items-center flex-wrap type position-relative'}).get_text()
-            contract = re.sub(r'\s(?=\s)', '', re.sub(
-                r'\s', ' ', contract)).strip()
-            value = value + [currency] + [contract]
-            value_currency_contract.append(value)
+    try:
+        for cash_class in cash_list_class:
+            if """class="salary">""" in str(cash_class):
+                cash = cash_class.find('h4', {'class': 'mb-0'}).get_text()
+                cash = re.sub(r'\s(?=\s)', '', re.sub(
+                    r'\s', ' ', cash)).strip()
+                cash = re.sub(r'(\d)\s+(\d)', r'\1\2', cash)
+                value = [int(s) for s in cash.split() if s.isdigit()]
+                currency = [str(s) for s in cash.split() if not s.isdigit()]
+                if '-' in currency:
+                    currency.remove('-')
+                currency = ', '.join(str(e) for e in currency)
+                contract = cash_class.find('div', {
+                    'class': 'paragraph font-size-14 d-flex align-items-center flex-wrap type position-relative'}).get_text()
+                contract = re.sub(r'\s(?=\s)', '', re.sub(
+                    r'\s', ' ', contract)).strip()
+                value = value + [currency] + [contract]
+                value_currency_contract.append(value)
+    except AttributeError:
+        value_currency_contract = []
     return value_currency_contract
 
 
@@ -166,8 +171,15 @@ now = now.strftime("%Y-%m-%d %H:%M:%S")
 
 urls = pd.read_csv(f'data/{NAME}_nofluffjobs_urls.csv')
 urls = [f'https://nofluffjobs.com{x}' for x in urls['urls']]
-# urls = urls[-20:-10]
-# urls = ['https://nofluffjobs.com/pl/job/technical-writer-with-python-devsdata-llc-remote-d1bj60dv']
+# urls = urls[0:10]
+# urls = ['https://nofluffjobs.com/pl/job/intern-php-developer-itransition-remote-tlfyleji']
+
+with contextlib.suppress(FileNotFoundError):
+    done = pd.read_csv(f'data/{NAME}_nofluffjobs_done.csv', header=None)
+    urls = [x for x in urls if x not in done[0].tolist()]
+
+# ! TODO above should not be simple file with done. It should be data list with
+# ! scraped content
 
 data = []
 for u in urls:
@@ -175,7 +187,6 @@ for u in urls:
     page = requests.get(u, headers=headers)
     soup = BeautifulSoup(page.content, "html.parser")
     value_currency_contract = get_money(soup)
-
     scrape_dict = {'key': u.split('-')[-1]}
     scrape_dict['timestamp'] = now
     scrape_dict['link'] = u
@@ -198,9 +209,19 @@ for u in urls:
     scrape_dict['benfs'] = get_benfs(soup)
     data.append(scrape_dict)
 
+    # ! TODO do not save to done file. Instead append scraped content and use it
+    # ! as done
+    with open(f'data/{NAME}_nofluffjobs_done.csv', 'a') as f:
+        writer = csv.writer(f)
+        writer.writerow([u])
+
+# if data is empty exit
+if not data:
+    sys.exit('Jobs for scraping already in done list')
+
 # make dataframe and pivot it
 df_data = pd.DataFrame(data)
-df_data = df_data.head(-1)
+# df_data = df_data.head(-1)
 df_data = pd.melt(df_data, id_vars=['key'])
 
 # explode values in lists but keep original sorting
@@ -239,5 +260,14 @@ for k in df_data['key'].unique():
                 df_data['variable'][index[1]] = f'{c}_cash_currency'
 
 # save
-df_data.to_csv(f'data/{NAME}_result.csv', index=False)
-df_data.to_excel(f'data/{NAME}_result.xlsx', index=False)
+if not os.path.isfile(f'data/{NAME}_result.csv'):
+    df_data.to_csv(f'data/{NAME}_result.csv', index=False)
+else:
+    df_data.to_csv(f'data/{NAME}_result.csv', mode='a',
+                   header=False, index=False)
+
+# ! TODO if yo fix 'done' below should also be changed.
+# update done
+pd.concat([done[0], df_data.loc[df_data['variable'] == 'link']['value']]
+          ).drop_duplicates().to_csv(f'data/{NAME}_nofluffjobs_done.csv',
+                                     index=False)

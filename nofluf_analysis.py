@@ -2,8 +2,19 @@ import pandas as pd
 import json
 from config import *
 
+
+def remove_list_duplicates():
+    df = pd.read_csv(f'data/{NAME}_nofluffjobs_urls.csv')
+    df.drop_duplicates(inplace=True)
+    df.to_csv(f'data/{NAME}_nofluffjobs_urls.csv', index=False)
+    return df
+
+
+df = remove_list_duplicates()
+
 # df = pd.read_excel('data/result.xlsx')
 df = pd.read_csv(f'data/{NAME}_result.csv')
+len(df['key'].unique()) / 20
 
 df['value'] = df['value'].str.lower()
 
