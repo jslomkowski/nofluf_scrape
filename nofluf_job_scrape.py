@@ -43,56 +43,79 @@ def get_level_high(soup):
 
 
 def get_pri_req(soup):
-    def find_req(req):
-        req_list = []
-        for k, v in find_dict.items():
-            rows = req.find_all(k, {'class': v})
-            req_list.extend(r.get_text().strip() for r in rows)
-        return req_list
-    find_dict = {'object': 'btn btn-outline-success btn-sm text-truncate',
-                 'button': 'btn btn-outline-success btn-sm no-cursor text-truncate'}
-    req = soup.find_all('h3', {'class': 'mb-0'})
-    primary_req_list = find_req(req[0])
+    # def find_req(req):
+    #     req_list = []
+    #     for k, v in find_dict.items():
+    #         rows = req.find_all(k, {'class': v})
+    #         req_list.extend(r.get_text().strip() for r in rows)
+    #     return req_list
+    # find_dict = {'object': 'btn btn-outline-success btn-sm text-truncate',
+    #              'button': 'btn btn-outline-success btn-sm no-cursor text-truncate'}
+    # req = soup.find_all('h3', {'class': 'mb-0'})
+    # primary_req_list = find_req(req[0])
+
+    requirements = soup.find(
+        'section', {'data-cy-section': 'JobOffer_Requirements'})
+    primary_req_list = requirements.find_all('ul')[0].text.strip().split("\n")
     return primary_req_list
 
 
 def get_sec_req(soup):
-    def find_req(req):
-        req_list = []
-        for k, v in find_dict.items():
-            rows = req.find_all(k, {'class': v})
-            req_list.extend(r.get_text().strip() for r in rows)
-        return req_list
-    find_dict = {'object': 'btn btn-outline-success btn-sm text-truncate',
-                 'button': 'btn btn-outline-success btn-sm no-cursor text-truncate'}
-    req = soup.find_all('h3', {'class': 'mb-0'})
-    secondary_req_list = find_req(req[1]) if len(req) > 1 else []
+    # def find_req(req):
+    #     req_list = []
+    #     for k, v in find_dict.items():
+    #         rows = req.find_all(k, {'class': v})
+    #         req_list.extend(r.get_text().strip() for r in rows)
+    #     return req_list
+    # find_dict = {'object': 'btn btn-outline-success btn-sm text-truncate',
+    #              'button': 'btn btn-outline-success btn-sm no-cursor text-truncate'}
+    # req = soup.find_all('h3', {'class': 'mb-0'})
+    # secondary_req_list = find_req(req[1]) if len(req) > 1 else []
+
+    requirements = soup.find(
+        'section', {'data-cy-section': 'JobOffer_Requirements'})
+    secondary_req_list = requirements.find_all(
+        'ul')[1].text.strip().split("\n")
     return secondary_req_list
 
 
 def get_money(soup):
-    value_currency_contract = []
-    cash_list_class = soup.find_all('div', {'class': "salary"})
-    try:
-        for cash_class in cash_list_class:
-            if """class="salary">""" in str(cash_class):
-                cash = cash_class.find('h4', {'class': 'mb-0'}).get_text()
-                cash = re.sub(r'\s(?=\s)', '', re.sub(
-                    r'\s', ' ', cash)).strip()
-                cash = re.sub(r'(\d)\s+(\d)', r'\1\2', cash)
-                value = [int(s) for s in cash.split() if s.isdigit()]
-                currency = [str(s) for s in cash.split() if not s.isdigit()]
-                if '-' in currency:
-                    currency.remove('-')
-                currency = ', '.join(str(e) for e in currency)
-                contract = cash_class.find('div', {
-                    'class': 'paragraph font-size-14 d-flex align-items-center flex-wrap type position-relative'}).get_text()
-                contract = re.sub(r'\s(?=\s)', '', re.sub(
-                    r'\s', ' ', contract)).strip()
-                value = value + [currency] + [contract]
-                value_currency_contract.append(value)
-    except AttributeError:
-        value_currency_contract = []
+    value_currency_contract = soup.find(
+        'h4', {'class': 'tw-mb-0'}).text.strip()
+    value_currency_contract = re.sub(r'\s(?=\s)', '', re.sub(
+        r'\s', ' ', value_currency_contract)).strip()
+    value_currency_contract = re.sub(
+        r'(\d)\s+(\d)', r'\1\2', value_currency_contract)
+    value = [int(s) for s in value_currency_contract.split() if s.isdigit()]
+    currency = [str(s)
+                for s in value_currency_contract.split() if not s.isdigit()]
+    if '–' in currency:
+        currency.remove('–')
+    currency = ', '.join(str(e) for e in currency)
+    return value + [currency]
+
+    # value_currency_contract = []
+    # cash_list_class = soup.find_all('div', {'class': "salary ng-star-inserted"})
+    # try:
+    #     for cash_class in cash_list_class:
+    #         if """class="salary ng-star-inserted">""" in str(cash_class):
+    #             cash = cash_class.find('h4', {'class': 'mb-0'}).get_text()
+    #             cash = re.sub(r'\s(?=\s)', '', re.sub(
+    #                 r'\s', ' ', cash)).strip()
+    #             cash = re.sub(r'(\d)\s+(\d)', r'\1\2', cash)
+    #             value = [int(s) for s in cash.split() if s.isdigit()]
+    #             currency = [str(s) for s in cash.split() if not s.isdigit()]
+    #             if '-' in currency:
+    #                 currency.remove('-')
+    #             currency = ', '.join(str(e) for e in currency)
+    #             contract = cash_class.find('div', {
+    #                 'class': 'paragraph font-size-14 d-flex align-items-center flex-wrap type position-relative'}).get_text()
+    #             contract = re.sub(r'\s(?=\s)', '', re.sub(
+    #                 r'\s', ' ', contract)).strip()
+    #             value = value + [currency] + [contract]
+    #             value_currency_contract.append(value)
+    # except AttributeError:
+    #     value_currency_contract = []
     return value_currency_contract
 
 
@@ -171,7 +194,7 @@ now = now.strftime("%Y-%m-%d %H:%M:%S")
 
 urls = pd.read_csv(f'data/{NAME}_nofluffjobs_urls.csv')
 urls = [f'https://nofluffjobs.com{x}' for x in urls['urls']]
-# urls = urls[0:10]
+urls = urls[0:1]
 # urls = ['https://nofluffjobs.com/pl/job/intern-php-developer-itransition-remote-tlfyleji']
 
 with contextlib.suppress(FileNotFoundError):
@@ -186,7 +209,7 @@ for u in urls:
     print(u)
     page = requests.get(u, headers=headers)
     soup = BeautifulSoup(page.content, "html.parser")
-    value_currency_contract = get_money(soup)
+
     scrape_dict = {'key': u.split('-')[-1]}
     scrape_dict['timestamp'] = now
     scrape_dict['link'] = u
@@ -196,17 +219,14 @@ for u in urls:
     scrape_dict['level_high'] = get_level_high(soup)
     scrape_dict['primary_req'] = get_pri_req(soup)
     scrape_dict['secondary_req'] = get_sec_req(soup)
-    for i in range(len(value_currency_contract)):
-        scrape_dict[value_currency_contract[i][-1]
-                    ] = value_currency_contract[i][:-1]
     scrape_dict['locations'] = get_locations(soup)
     scrape_dict['remote'] = get_remote(soup)
     scrape_dict['posting_time'] = get_posting_time(soup)
-    scrape_dict['tasks'] = get_tasks(soup)
-    scrape_dict['specs'] = get_specs(soup)
-    scrape_dict['gear'] = get_gear(soup)
-    scrape_dict['envs'] = get_envs(soup)
-    scrape_dict['benfs'] = get_benfs(soup)
+    scrape_dict['tasks'] = get_tasks(soup)  # nie działa
+    scrape_dict['specs'] = get_specs(soup)  # to jest lista z jednym stringiem
+    scrape_dict['gear'] = get_gear(soup)  # nie działa
+    scrape_dict['envs'] = get_envs(soup)  # nie działa
+    scrape_dict['benfs'] = get_benfs(soup)  # nie działa
     data.append(scrape_dict)
 
     # ! TODO do not save to done file. Instead append scraped content and use it
