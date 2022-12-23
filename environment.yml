@@ -1,4 +1,4 @@
-name: bs_test
+name: nf_scrape
 channels:
   - conda-forge
   - anaconda
