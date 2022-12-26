@@ -5,7 +5,7 @@ FIRST_PAGE = """
 https://nofluffjobs.com/pl/artificial-intelligence?page=1
 """
 
-### get date in format yyyy-mm-dd
+# ## get date in format yyyy-mm-dd
 DATE = datetime.datetime.now().strftime("%Y-%m-%d")
 NAME = f"ai_{DATE}"
 
