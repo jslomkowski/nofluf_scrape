@@ -130,3 +130,5 @@ dmypy.json
 *.xlsx
 *.csv
 *.html
+~.gitkeep
+offers/

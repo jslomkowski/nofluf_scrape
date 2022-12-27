@@ -1,7 +1,8 @@
+import re
+
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
-import re
 
 from config import *
 
@@ -10,7 +11,7 @@ urls = pd.read_csv(f"data/{NAME}_nofluffjobs_urls.csv")
 urls = [f"https://nofluffjobs.com{x}" for x in urls["urls"]]
 
 df = pd.DataFrame(columns=[
-    "job_title", "company_name", "experience_low", "experience_high",
+    "job_title", "link", "company_name", "experience_low", "experience_high",
     "UoP_currency", "UoP_cash_low", "UoP_cash_high",
     "B2B_currency", "B2B_cash_low", "B2B_cash_high", "is_remote", "location",
     "when_published", "primary_skils", "secondary_skils",
@@ -19,27 +20,36 @@ df = pd.DataFrame(columns=[
     "additional_benefits"])
 
 
-for u in urls[2:5]:
+for u in urls:
     print(u)
-    u = "https://nofluffjobs.com/pl/job/senior-data-scientist-indata-labs-remote-uq8jmtqh"
-    response = requests.get(u)
-
-    # Parse the HTML content
-    soup = BeautifulSoup(response.content, "html.parser")
+    # u = "https://nofluffjobs.com/pl/job/data-scientist-numlabs-remote-mgyggkci"
+    extract = {}
+    try:
+        with open("data/offers/" + u[31:], "r", encoding="utf-8") as file:
+            soup = BeautifulSoup(file.read(), "html.parser")
+    except FileNotFoundError:
+        response = requests.get(u)
+        soup = BeautifulSoup(response.content, "html.parser")
+        with open("data/offers/" + u[31:], "w", encoding="utf-8") as file:
+            file.write(str(soup))
 
     try:
         job_title = soup.find(
             "h1", {"class": "font-weight-bold bigger"}).text.strip()
     except AttributeError:
         job_title = soup.find("h1", {"class": "font-weight-bold"}).text.strip()
+    extract["job_title"] = job_title
 
-    company_name = soup.find("a", {"id": "postingCompanyUrl"}).text.strip()
+    extract["link"] = u
+
+    extract["company_name"] = soup.find("a", {"id": "postingCompanyUrl"}).text.strip()
+
     experience_low = soup.find("li", {"id": "posting-seniority"}).text.strip()
     try:
-        experience_low = experience_low.split(", ")[0]
-        experience_high = experience_low.split(", ")[1]
+        extract["experience_low"] = experience_low.split(", ")[0]
+        extract["experience_high"] = experience_low.split(", ")[1]
     except IndexError:
-        experience_high = experience_low
+        extract["experience_high"] = experience_low
 
     salaries = soup.find("common-posting-salaries-list")
     salaries = salaries.find_all("div", {"class": "salary ng-star-inserted"})
@@ -55,80 +65,94 @@ for u in urls[2:5]:
         contract_type = re.search(r"(B2B|UoP)", string).group()
         return cash_low, cash_high, currency_code, contract_type
 
-    salary_dict = {}
     for salary in salaries:
         cash_low, cash_high, currency_code, contract_type = extract_info(
             salary)
-        salary_dict[f"{contract_type}_currency"] = currency_code
-        salary_dict[f"{contract_type}_cash_low"] = cash_low
-        salary_dict[f"{contract_type}_cash_high"] = cash_high
+        extract[f"{contract_type}_currency"] = currency_code
+        extract[f"{contract_type}_cash_low"] = cash_low
+        extract[f"{contract_type}_cash_high"] = cash_high
 
     try:
-        is_remote = soup.find(
-            "li", {"class": "remote ng-star-inserted"}).text.strip()
+        if soup.find("li", {"class": "remote ng-star-inserted"}).text.strip() == "Zdalnie":
+            extract["is_remote"] = "Yes"
     except AttributeError:
-        is_remote = ["No"]
+        extract["is_remote"] = "No"
 
     try:
-        location = soup.find("div", {
-                             "class": "tw-flex tw-items-center cursor-pointer ng-star-inserted"}).text.strip()
+        extract["location"] = soup.find("div", {
+            "class": "tw-flex tw-items-center cursor-pointer ng-star-inserted"}).text.strip()
     except AttributeError:
-        location = ["No"]
+        extract["location"] = "No"
 
-    when_published = soup.find(
+    extract["when_published"] = soup.find(
         "div", {"class": "posting-time-row ng-star-inserted"}).text.strip()
 
     primary_skils = soup.find("section", {"branch": "musts"}).find("ul")
     primary_skils = list(filter(None, [x.text.strip() for x in primary_skils]))
-    primary_skils = ", ".join(str(e) for e in primary_skils)
+    extract["primary_skils"] = ", ".join(str(e) for e in primary_skils)
     try:
         secondary_skils = soup.find(
             "section", {"id": "posting-nice-to-have"}).find("ul")
         secondary_skils = list(
             filter(None, [x.text.strip() for x in secondary_skils]))
     except AttributeError:
-        secondary_skils = ["No"]
-    secondary_skils = ", ".join(str(e) for e in secondary_skils)
+        secondary_skils = [False]
+    extract["secondary_skils"] = ", ".join(str(e) for e in secondary_skils)
 
     requirements = soup.find(
         "section", {"data-cy-section": "JobOffer_Requirements"})
-    primary_requirements = list(
-        filter(None, requirements.find_all("ul")[0].text.strip().split("\n")))
+
+    try:
+        primary_requirements = list(
+            filter(None, requirements.find_all("ul")[0].text.strip().split("\n")))
+    except (AttributeError, IndexError):
+        primary_requirements = [False]
+
     try:
         secondary_requirements = list(
             filter(None, requirements.find_all("ul")[1].text.strip().split("\n")))
-    except IndexError:
-        secondary_requirements = ["No"]
-    primary_requirements = ", ".join(str(e) for e in primary_requirements)
-    secondary_requirements = ", ".join(str(e) for e in secondary_requirements)
+    except (AttributeError, IndexError):
+        secondary_requirements = [False]
 
-    offer_description = soup.find("section", {"id": "posting-description"}).find(
-        "div", {"class": "tw-overflow-hidden ng-star-inserted"}).text.strip()
+    extract["primary_requirements"] = ", ".join(
+        str(e) for e in primary_requirements)
+    extract["secondary_requirements"] = ", ".join(
+        str(e) for e in secondary_requirements)
+
+    try:
+        extract["offer_description"] = soup.find(
+            "section", {"id": "posting-description"}).find(
+                "div", {"class": "tw-overflow-hidden ng-star-inserted"}).text.strip()
+    except AttributeError:
+        extract["offer_description"] = False
 
     try:
         tasks_list = soup.find("section", {"id": "posting-tasks"})
         tasks_list = [x.text.strip()
                       for x in tasks_list.find("ol").find_all("li")]
     except AttributeError:
-        tasks_list = ["No"]
-    tasks_list = ", ".join(str(e) for e in tasks_list)
+        tasks_list = [False]
+    extract["tasks_list"] = ", ".join(str(e) for e in tasks_list)
 
     offer_details = soup.find(
         "section", {"class": "d-block p-20 border-top"}).find("ul")
     offer_details = [x.text.strip() for x in offer_details.find_all("li")]
-    offer_details = ", ".join(str(e) for e in offer_details)
+    extract["offer_details"] = ", ".join(str(e) for e in offer_details)
 
-    equipment = soup.find("section", {"id": "posting-equipment"}).find("ul")
-    equipment = [x.text.strip() for x in equipment.find_all("li")]
-    equipment = ", ".join(str(e) for e in equipment)
+    try:
+        equipment = soup.find("section", {"id": "posting-equipment"}).find("ul")
+        equipment = [x.text.strip() for x in equipment.find_all("li")]
+        extract["equipment"] = ", ".join(str(e) for e in equipment)
+    except AttributeError:
+        extract["equipment"] = False
 
     try:
         metodology = soup.find(
             "section", {"id": "posting-environment"}).find("ul")
         metodology = [x.text.strip() for x in metodology.find_all("li")]
     except AttributeError:
-        metodology = ["No"]
-    metodology = ", ".join(str(e) for e in metodology)
+        metodology = [False]
+    extract["metodology"] = ", ".join(str(e) for e in metodology)
 
     try:
         benefits = soup.find(
@@ -137,38 +161,15 @@ for u in urls[2:5]:
         additional_benefits = [x.text.strip()
                                for x in benefits[1].find_all("li")]
     except IndexError:
-        office_benefits = ["No"]
-        additional_benefits = ["No"]
-    office_benefits = ", ".join(str(e) for e in office_benefits)
-    additional_benefits = ", ".join(str(e) for e in additional_benefits)
+        office_benefits = [False]
+        additional_benefits = [False]
+    extract["office_benefits"] = ", ".join(
+        str(e) for e in office_benefits)
+    extract["additional_benefits"] = ", ".join(
+        str(e) for e in additional_benefits)
 
-    # ! TODO integrate salary_dict with df
-    
-    df_combine = pd.DataFrame({
-        "job_title": job_title,
-        "company_name": company_name,
-        "experience_low": experience_low,
-        "experience_high": experience_high,
-        "UoP_currency": UoP_currency,
-        "UoP_cash_low": UoP_cash_low,
-        "UoP_cash_high": UoP_cash_high,
-        "B2B_currency": B2B_currency,
-        "B2B_cash_low": B2B_cash_low,
-        "B2B_cash_high": B2B_cash_high,
-        "is_remote": is_remote,
-        "location": location,
-        "when_published": when_published,
-        "primary_skils": primary_skils,
-        "secondary_skils": secondary_skils,
-        "primary_requirements": primary_requirements,
-        "secondary_requirements": secondary_requirements,
-        "offer_description": offer_description,
-        "tasks_list": tasks_list,
-        "offer_details": offer_details,
-        "equipment": equipment,
-        "metodology": metodology,
-        "office_benefits": office_benefits,
-        "additional_benefits": additional_benefits
-    })
+    df_extract = pd.DataFrame(extract, index=[0])
 
-    df = pd.concat([df, df_combine], ignore_index=False)
+    df = pd.concat([df, df_extract])
+
+df.to_excel("output.xlsx", index=False)
