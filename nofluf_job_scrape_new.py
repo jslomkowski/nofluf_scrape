@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 
 from config import *
 
-NAME = "ai_2022-12-27"
+# NAME = "ai_2022-12-27"
 urls = pd.read_csv(f"data/{NAME}_nofluffjobs_urls.csv")
 urls = [f"https://nofluffjobs.com{x}" for x in urls["urls"]]
 
@@ -42,7 +42,8 @@ for u in urls:
 
     extract["link"] = u
 
-    extract["company_name"] = soup.find("a", {"id": "postingCompanyUrl"}).text.strip()
+    extract["company_name"] = soup.find(
+        "a", {"id": "postingCompanyUrl"}).text.strip()
 
     experience_low = soup.find("li", {"id": "posting-seniority"}).text.strip()
     try:
@@ -140,7 +141,8 @@ for u in urls:
     extract["offer_details"] = ", ".join(str(e) for e in offer_details)
 
     try:
-        equipment = soup.find("section", {"id": "posting-equipment"}).find("ul")
+        equipment = soup.find(
+            "section", {"id": "posting-equipment"}).find("ul")
         equipment = [x.text.strip() for x in equipment.find_all("li")]
         extract["equipment"] = ", ".join(str(e) for e in equipment)
     except AttributeError:
@@ -172,4 +174,4 @@ for u in urls:
 
     df = pd.concat([df, df_extract])
 
-df.to_excel("output.xlsx", index=False)
+df.to_excel(f"data/{NAME}_output.xlsx", index=False)
