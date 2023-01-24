@@ -13,16 +13,20 @@ urls = [f"https://nofluffjobs.com{x}" for x in urls["urls"]]
 df = pd.DataFrame(columns=[
     "job_title", "link", "company_name", "experience_low", "experience_high",
     "UoP_currency", "UoP_cash_low", "UoP_cash_high",
-    "B2B_currency", "B2B_cash_low", "B2B_cash_high", "is_remote", "location",
+    "B2B_currency", "B2B_cash_low", "B2B_cash_high",
+    "UoD_currency", "UoD_cash_low", "UoD_cash_high",
+    "UZ_currency", "UZ_cash_low", "UZ_cash_high",
+    "is_remote", "location",
     "when_published", "primary_skils", "secondary_skils",
     "primary_requirements", "secondary_requirements", "offer_description",
     "tasks_list", "offer_details", "equipment", "metodology", "office_benefits",
     "additional_benefits"])
 
 
+# urls = urls[:4]
 for u in urls:
     print(u)
-    # u = "https://nofluffjobs.com/pl/job/data-scientist-numlabs-remote-mgyggkci"
+    # u = "https://nofluffjobs.com/pl/job/ml-architect-concentrix-remote-9hgqnvv4"
     extract = {}
     try:
         with open("data/offers/" + u[31:], "r", encoding="utf-8") as file:
@@ -56,14 +60,14 @@ for u in urls:
     salaries = salaries.find_all("div", {"class": "salary ng-star-inserted"})
     salaries = [x.text.strip().replace("\xa0", "") for x in salaries]
 
-    def extract_info(string):
-        cash_low = int(re.search(r"^\d+", string).group())
+    def extract_info(salary):
+        cash_low = int(re.search(r"^\d+", salary).group())
         try:
-            cash_high = int(re.search(r"\s+\d+\s+", string).group().strip())
+            cash_high = int(re.search(r"\s+\d+\s+", salary).group().strip())
         except AttributeError:
             cash_high = cash_low
-        currency_code = re.search(r"[A-Z]{3}", string).group()
-        contract_type = re.search(r"(B2B|UoP)", string).group()
+        currency_code = re.search(r"[A-Z]{3}", salary).group()
+        contract_type = re.search(r"(B2B|UoP|UoD|UZ)", salary).group()
         return cash_low, cash_high, currency_code, contract_type
 
     for salary in salaries:
