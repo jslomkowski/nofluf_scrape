@@ -15,7 +15,7 @@ urls = pd.read_csv(f"data/urls/{NAME}_nofluffjobs_urls.csv")
 urls = [f"https://nofluffjobs.com{x}" for x in urls["urls"]]
 
 # urls = urls[urls.index(
-#     "https://nofluffjobs.com/pl/job/remote-mid-senior-node-js-developer-vaimo-qkamlpyr"):]
+#     "https://nofluffjobs.com/pl/job/senior-java-developer-roku-proxet-remote-xfhk5ncq"):]
 
 # urls = urls[:2]
 
@@ -26,7 +26,7 @@ urls = [f"https://nofluffjobs.com{x}" for x in urls["urls"]]
 
 for u in urls:
     print(u)
-    # u = "https://nofluffjobs.com/pl/job/remote-mid-senior-node-js-developer-vaimo-qkamlpyr"
+    u = "https://nofluffjobs.com/pl/job/remote-mid-senior-node-js-developer-vaimo-qkamlpyr"
 
     df = pd.DataFrame(columns=[
         "job_title", "link", "company_name", "experience_low", "experience_high",
@@ -44,14 +44,16 @@ for u in urls:
     try:
         with open("data/offers/" + u[31:], "r", encoding="utf-8") as file:
             soup = BeautifulSoup(file.read(), "html.parser")
-        if "504 Gateway Time-out" in soup.text.strip():
-            print('error 504 Gateway Time-out')
-            os.remove("data/offers/" + u[31:])
     except FileNotFoundError:
         response = requests.get(u)
         soup = BeautifulSoup(response.content, "html.parser")
         with open("data/offers/" + u[31:], "w", encoding="utf-8") as file:
             file.write(str(soup))
+
+    if "504 Gateway Time-out" in soup.text.strip():
+        print('error 504 Gateway Time-out')
+        # os.remove("data/offers/" + u[31:])
+        continue
 
     try:
         job_title = soup.find(
