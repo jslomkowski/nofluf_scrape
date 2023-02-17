@@ -26,7 +26,7 @@ urls = [f"https://nofluffjobs.com{x}" for x in urls["urls"]]
 
 for u in urls:
     print(u)
-    u = "https://nofluffjobs.com/pl/job/remote-mid-senior-node-js-developer-vaimo-qkamlpyr"
+    # u = "https://nofluffjobs.com/pl/job/remote-mid-senior-node-js-developer-vaimo-qkamlpyr"
 
     df = pd.DataFrame(columns=[
         "job_title", "link", "company_name", "experience_low", "experience_high",
