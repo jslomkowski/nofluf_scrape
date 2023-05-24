@@ -33,7 +33,7 @@ def count_skills(df, column_name):
 
 
 top_skills_count = count_skills(df, "primary_skils")[:15]
-print(top_skills_count)
-
+print("Primary skils", top_skills_count)
+print("\n")
 secondary_skills_count = count_skills(df, "secondary_skils")[:15]
-print(secondary_skills_count)
+print("Secondary skils", secondary_skills_count)
