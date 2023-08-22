@@ -14,19 +14,8 @@ with contextlib.suppress(FileExistsError):
 urls = pd.read_csv(f"data/urls/{NAME}_nofluffjobs_urls.csv")
 urls = [f"https://nofluffjobs.com{x}" for x in urls["urls"]]
 
-# urls = urls[urls.index(
-#     "https://nofluffjobs.com/pl/job/senior-java-developer-roku-proxet-remote-xfhk5ncq"):]
-
-# urls = urls[:2]
-
-# # if you want to restart from where it broke:
-# extracted_offers = pd.read_csv(f"data/results/{NAME}_output.csv", sep=";")[['link']]
-# extracted_offers = extracted_offers['link'].tolist()
-# urls = [x for x in urls if x not in extracted_offers]
-
 for u in urls:
     print(u)
-    # u = "https://nofluffjobs.com/pl/job/remote-mid-senior-node-js-developer-vaimo-qkamlpyr"
 
     df = pd.DataFrame(columns=[
         "job_title", "link", "company_name", "experience_low", "experience_high",
@@ -52,7 +41,6 @@ for u in urls:
 
     if "504 Gateway Time-out" in soup.text.strip():
         print('error 504 Gateway Time-out')
-        # os.remove("data/offers/" + u[31:])
         continue
 
     try:
