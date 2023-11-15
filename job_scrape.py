@@ -1,3 +1,11 @@
+"""
+This module contains a script that scrapes job offers from nofluffjobs.com
+website. The script reads urls from a csv file, scrapes the data from each url,
+and saves the results in a csv and xlsx file. The scraped data includes job
+title, company name, experience level, salary information, location, skills,
+requirements, offer description, tasks list, offer details, equipment,
+methodology, office benefits, and additional benefits.
+"""
 import contextlib
 import os
 import re
@@ -6,7 +14,7 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 
-from config import *
+from config import NAME
 
 with contextlib.suppress(FileExistsError):
     os.mkdir(f"data/results/{NAME}")
@@ -34,7 +42,7 @@ for u in urls:
         with open("data/offers/" + u[31:], "r", encoding="utf-8") as file:
             soup = BeautifulSoup(file.read(), "html.parser")
     except FileNotFoundError:
-        response = requests.get(u)
+        response = requests.get(u, timeout=10)
         soup = BeautifulSoup(response.content, "html.parser")
         with open("data/offers/" + u[31:], "w", encoding="utf-8") as file:
             file.write(str(soup))
