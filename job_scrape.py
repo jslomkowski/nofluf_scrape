@@ -9,6 +9,7 @@ methodology, office benefits, and additional benefits.
 import contextlib
 import os
 import re
+import sys
 
 import pandas as pd
 import requests
@@ -22,20 +23,20 @@ with contextlib.suppress(FileExistsError):
 urls = pd.read_csv(f"data/urls/{NAME}_nofluffjobs_urls.csv")
 urls = [f"https://nofluffjobs.com{x}" for x in urls["urls"]]
 
+df_all = pd.DataFrame(columns=[
+    "job_title", "link", "company_name", "experience_low", "experience_high",
+    "employment_currency", "employment_cash_low", "employment_cash_high",
+    "B2B_currency", "B2B_cash_low", "B2B_cash_high",
+    "UoD_currency", "UoD_cash_low", "UoD_cash_high",
+    "mandate_currency", "mandate_cash_low", "mandate_cash_high",
+    "is_remote", "location",
+    "when_published", "primary_skils", "secondary_skils",
+    "primary_requirements", "secondary_requirements", "offer_description",
+    "tasks_list", "offer_details", "equipment", "metodology", "office_benefits",
+    "additional_benefits"])
+
 for u in urls:
     print(u)
-
-    df = pd.DataFrame(columns=[
-        "job_title", "link", "company_name", "experience_low", "experience_high",
-        "UoP_currency", "UoP_cash_low", "UoP_cash_high",
-        "B2B_currency", "B2B_cash_low", "B2B_cash_high",
-        "UoD_currency", "UoD_cash_low", "UoD_cash_high",
-        "UZ_currency", "UZ_cash_low", "UZ_cash_high",
-        "is_remote", "location",
-        "when_published", "primary_skils", "secondary_skils",
-        "primary_requirements", "secondary_requirements", "offer_description",
-        "tasks_list", "offer_details", "equipment", "metodology", "office_benefits",
-        "additional_benefits"])
 
     extract = {}
     try:
@@ -48,8 +49,8 @@ for u in urls:
             file.write(str(soup))
 
     if "504 Gateway Time-out" in soup.text.strip():
-        print('error 504 Gateway Time-out')
-        continue
+        print('Error 504 Gateway Time-out. Exiting.')
+        sys.exit(1)
 
     try:
         job_title = soup.find(
@@ -76,13 +77,22 @@ for u in urls:
     salaries = [x.text.strip().replace("\xa0", "") for x in salaries]
 
     def extract_info(salary):
-        cash_low = int(re.search(r"^\d+", salary).group())
+        """Extracts salary information from a string."""
         try:
-            cash_high = int(re.search(r"\s+\d+\s+", salary).group().strip())
+            cash_low = int(re.search(r"^\d+", salary).group())
+            try:
+                cash_high = int(
+                    re.search(r"\s+\d+\s+", salary).group().strip())
+            except AttributeError:
+                cash_high = cash_low
+            currency_code = re.search(r"[A-Z]{3}", salary).group()
+            contract_type = re.search(
+                r"(B2B|employment|UoD|mandate)", salary).group()
         except AttributeError:
-            cash_high = cash_low
-        currency_code = re.search(r"[A-Z]{3}", salary).group()
-        contract_type = re.search(r"(B2B|UoP|UoD|UZ)", salary).group()
+            cash_low = None
+            cash_high = None
+            currency_code = None
+            contract_type = "Unpaid internship"
         return cash_low, cash_high, currency_code, contract_type
 
     for salary in salaries:
@@ -189,18 +199,8 @@ for u in urls:
     extract["additional_benefits"] = ", ".join(
         str(e) for e in additional_benefits)
 
-    df_extract = pd.DataFrame(extract, index=[0])
+    df_extract = pd.DataFrame([extract], columns=df_all.columns)
+    df_all = pd.concat([df_all, df_extract], ignore_index=True)
 
-    df = pd.concat([df, df_extract], ignore_index=True)
-
-    if os.path.isfile(f"data/results/{NAME}/{NAME}_output.csv"):
-        df.to_csv(
-            f"data/results/{NAME}/{NAME}_output.csv", index=False, header=False,
-            mode="a", sep=";")
-    else:
-        df.to_csv(
-            f"data/results/{NAME}/{NAME}_output.csv", index=False, header=True,
-            mode="w", sep=";")
-
-df = pd.read_csv(f"data/results/{NAME}/{NAME}_output.csv", sep=";")
-df.to_excel(f"data/results/{NAME}/{NAME}_output.xlsx", index=False)
+df_all.to_csv(f"data/results/{NAME}/{NAME}_output.csv", index=False, sep="|")
+df_all.to_excel(f"data/results/{NAME}/{NAME}_output.xlsx", index=False)
