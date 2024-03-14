@@ -22,13 +22,16 @@ with contextlib.suppress(FileExistsError):
 
 urls = pd.read_csv(f"data/urls/{NAME}_nofluffjobs_urls.csv")
 urls = [f"https://nofluffjobs.com{x}" for x in urls["urls"]]
+urls = ['https://nofluffjobs.com/pl/job/sharepoint-administrator-link-group-warszawa-kl72lcha']
+# urls = ['https://nofluffjobs.com/pl/job/machine-learning-engineer-tooploox-remote-1']
+
 
 df_all = pd.DataFrame(columns=[
     "job_title", "link", "company_name", "experience_low", "experience_high",
-    "employment_currency", "employment_cash_low", "employment_cash_high",
+    "salary_match", "UoP_currency", "UoP_cash_low", "UoP_cash_high",
     "B2B_currency", "B2B_cash_low", "B2B_cash_high",
     "UoD_currency", "UoD_cash_low", "UoD_cash_high",
-    "mandate_currency", "mandate_cash_low", "mandate_cash_high",
+    "UZ_currency", "UZ_cash_low", "UZ_cash_high",
     "is_remote", "location",
     "when_published", "primary_skils", "secondary_skils",
     "primary_requirements", "secondary_requirements", "offer_description",
@@ -73,8 +76,15 @@ for u in urls:
         extract["experience_high"] = experience_low
 
     salaries = soup.find("common-posting-salaries-list")
-    salaries = salaries.find_all("div", {"class": "salary ng-star-inserted"})
-    salaries = [x.text.strip().replace("\xa0", "") for x in salaries]
+    if salaries is not None:
+        salaries = salaries.find_all(
+            "div", {"class": "salary ng-star-inserted"})
+        salaries = [x.text.strip().replace("\xa0", "") for x in salaries]
+        extract['salary_match'] = "no"
+    else:
+        salaries = soup.find("common-salary-match-check-status")
+        salaries = ""
+        extract['salary_match'] = "yes"
 
     def extract_info(salary):
         """Extracts salary information from a string."""
@@ -87,7 +97,7 @@ for u in urls:
                 cash_high = cash_low
             currency_code = re.search(r"[A-Z]{3}", salary).group()
             contract_type = re.search(
-                r"(B2B|employment|UoD|mandate)", salary).group()
+                r"(B2B|UoP|UoD|UZ)", salary).group()
         except AttributeError:
             cash_low = None
             cash_high = None

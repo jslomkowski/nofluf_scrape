@@ -1,20 +1,23 @@
-import pandas as pd
 import itertools
-from config import NAME
 
+import pandas as pd
+
+from config import NAME
 
 df = pd.read_excel(
     fr"data\results\{NAME}\{NAME}_output.xlsx", sheet_name="Sheet1")
 
 # set experience
 # exp = ['Expert', 'Senior', 'Mid', 'Junior', 'Trainee']
-exp = ['Senior', 'Mid']
+exp = ['Expert', 'Senior']
 
 # df = df[(df['experience_low'].isin(exp)) & (df['experience_high'].isin(exp))]
 df = df[(df['experience_high'].isin(exp))]
 
 
 def count_skills(df, column_name):
+    """Counts skills from a column with skills
+    """
     skills = list(df[column_name].str.split(", "))
     skills = list(itertools.chain.from_iterable(skills))
     skills = list(set(skills))

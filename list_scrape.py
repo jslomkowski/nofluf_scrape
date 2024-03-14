@@ -1,8 +1,10 @@
 import os
 import time
+
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
+
 from config import FIRST_PAGE, NAME, headers
 
 
@@ -69,3 +71,5 @@ def scrape_job_urls():
 
 
 scrape_job_urls()
+
+df = pd.read_csv(f'data/urls/{NAME}_nofluffjobs_urls.csv')

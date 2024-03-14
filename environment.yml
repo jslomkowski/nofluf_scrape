@@ -1,10 +1,9 @@
 name: nf_scrape
 channels:
   - conda-forge
-  - anaconda
 dependencies:
-  - python==3.10.5
-  - beautifulsoup4==4.11.1
-  - openpyxl==3.0.9
-  - pandas==1.4.2
-  - requests==2.27.1
+  - python=3.10
+  - beautifulsoup4==4.12.3
+  - openpyxl==3.1.2
+  - pandas==2.2.1
+  - requests==2.31.0
